@@ -1,20 +1,18 @@
 import database_connection as db
 
-db_conn_local = db.DatabaseConnection("localDB")
-db_conn_local = db_conn.getConn();
+class Collector:
+    db_conn_stack = None
+    db_conn_local = None
 
-db_conn_stack = db.DatabaseConnection("openstackDB")
-db_conn_stack = db_conn.getConn();
+    def __init__(self):
+        self.db_conn_stack = db.DatabaseConnection("openstackDB")
+        self.db_conn_stack = db_conn_stack.getConn();
+        self.db_conn_local = db.DatabaseConnection("localDB")
+        self.db_conn_local = db_conn_local.getConn();
 
-def collectIsolation():
-    # SELECT * FROM keystone.project;
-    # SELECT * FROM nova_cell1.instances;
-    return
 
-def collectSecurityGroups():
-    # SELECT * FROM neutron.securitygroup;
-    # SELECT * FROM neutron.securitygrouprules;
-    return
+class SecurityGroupsCollector(Collector):
+    pass
 
-def collectRoutes():
-    return
+class RoutesCollector(Collector):
+    pass
