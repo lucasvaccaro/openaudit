@@ -1,11 +1,30 @@
 import sys
 sys.path.append('../openaudit')
-
+import unittest
 import verifier
 
-v = verifier.IsolationVerifier()
-hosts = {
-    "host1": [("qwe", "host1", "proj2"), (("asd", "host1", "proj1"))],
-    "host2": [("poi", "host2", "proj2"), (("lkj", "host2", "proj2"))]
-}
-print v.verify(hosts)
+
+class VerifierTest(unittest.TestCase):
+
+    v = verifier.IsolationVerifier()
+
+    def testCompliant(self):
+        hosts = {
+            "server1": [("qwe", "server1", "p1"), (("asd", "server1", "p1"))],
+            "server2": [("poi", "server2", "p2"), (("lkj", "server2", "p2"))]
+        }
+        self.assertEqual(self.v.verify(hosts), [], "Should be empty")
+
+    def testNoncompliant(self):
+        hosts = {
+            "server1": [("qwe", "server1", "p1"), (("asd", "server1", "p1"))],
+            "server2": [("poi", "server2", "p1"), (("lkj", "server2", "p2"))]
+        }
+        noncompliant_hosts = self.v.verify(hosts)
+        self.assertEqual(noncompliant_hosts, ["server2"], "Should contain 'server2'")
+        rows = self.v.saveReport(noncompliant_hosts)
+        self.assertEqual(rows, 1, "Should be 1")
+
+
+if __name__ == '__main__':
+    unittest.main()

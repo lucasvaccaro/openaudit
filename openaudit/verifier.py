@@ -42,21 +42,34 @@ class IsolationVerifier(Verifier):
         """
         Checks whether instances from different projects are running on the same host
         Receives a dictionary of hosts
-        Returns an array of uncompliant hosts
+        Returns an array of uncompliant instances
         """
         noncompliant_hosts = []
         for host in hosts:
             project_id = None
             for inst in hosts[host]:
                 if (project_id != None and inst[2] != project_id):
-                    noncompliant_hosts.append(host)
-                    break
+                    noncompliant_hosts.append(inst[1])
                 else:
                     project_id = inst[2]
         return noncompliant_hosts
 
+    def saveReport(self, noncompliant_hosts):
+        """
+        Saves uncompliant hosts into openaudit DB
+        Returns number of rows inserted
+        """
+        sql_insert = "INSERT INTO openaudit.report_isolation (host) VALUES (%s)"
+        cursor = self.db_conn_local.cursor()
+        cursor.executemany(sql_insert, zip(noncompliant_hosts))
+        self.db_conn_local.commit()
+        return cursor.rowcount
+
     def run(self):
-        return self.verify(self.getDictHosts(self.getAllInstances()))
+        hosts = self.verify(self.getDictHosts(self.getAllInstances()))
+        if not hosts:
+            self.saveReport(hosts)
+        return hosts
 
 
 class SecurityGroupsVerifier(Verifier):
