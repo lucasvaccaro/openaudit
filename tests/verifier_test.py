@@ -1,28 +1,30 @@
 import sys
 sys.path.append('../openaudit')
-import unittest
 import verifier
+import reporter
+import unittest
 
 
-class VerifierTest(unittest.TestCase):
+class IsolationVerifierTest(unittest.TestCase):
 
     v = verifier.IsolationVerifier()
+    r = reporter.IsolationReporter()
 
     def testCompliant(self):
         hosts = {
-            "server1": [("qwe", "server1", "p1"), (("asd", "server1", "p1"))],
-            "server2": [("poi", "server2", "p2"), (("lkj", "server2", "p2"))]
+            "server1": [{"uuid":"qwe", "host":"server1", "project_id":"p1"}, {"uuid":"asd", "host":"server1", "project_id":"p1"}],
+            "server2": [{"uuid":"poi", "host":"server2", "project_id":"p2"}, {"uuid":"lkj", "host":"server2", "project_id":"p2"}]
         }
         self.assertEqual(self.v.verify(hosts), [], "Should be empty")
 
     def testNoncompliant(self):
         hosts = {
-            "server1": [("qwe", "server1", "p1"), (("asd", "server1", "p1"))],
-            "server2": [("poi", "server2", "p1"), (("lkj", "server2", "p2"))]
+            "server1": [{"uuid":"qwe", "host":"server1", "project_id":"p1"}, {"uuid":"asd", "host":"server1", "project_id":"p1"}],
+            "server2": [{"uuid":"poi", "host":"server2", "project_id":"p1"}, {"uuid":"lkj", "host":"server2", "project_id":"p2"}]
         }
         noncompliant_hosts = self.v.verify(hosts)
         self.assertEqual(noncompliant_hosts, ["server2"], "Should contain 'server2'")
-        rows = self.v.saveReport(noncompliant_hosts)
+        rows = self.r.save(noncompliant_hosts)
         self.assertEqual(rows, 1, "Should be 1")
 
 

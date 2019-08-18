@@ -1,37 +1,37 @@
 import database_connection as db
 
+
 class Verifier:
-    db_conn_stack = None
-    db_conn_local = None
+    db_conn = None
 
     def __init__(self):
-        self.db_conn_stack = db.DatabaseConnection("openstackDB")
-        self.db_conn_stack = self.db_conn_stack.getConn();
-        self.db_conn_local = db.DatabaseConnection("localDB")
-        self.db_conn_local = self.db_conn_local.getConn();
+        self.db_conn = db.DatabaseConnection("localDB")
+        self.db_conn = self.db_conn.getConn();
+
 
 class IsolationVerifier(Verifier):
 
-    def getAllInstances(self):
+    def getControllerData(self, snapshot_id):
         """
-        Returns all the instances with their host and project
+        Returns the instances collected from the controller host in a snapshot
         """
-        db_cursor = self.db_conn_stack.cursor()
+        db_cursor = self.db_conn.cursor(dictionary=True)
         db_cursor.execute(
             "SELECT uuid, host, project_id "
-            "FROM nova_cell1.instances "
-            "WHERE deleted = 0 "
+            "FROM openaudit.snapshot_isolation_controller "
+            "WHERE snapshot_id = %d",
+            (snapshot_id,)
         )
         return db_cursor.fetchall()
-    
+
     def getDictHosts(self, instances):
         """
-        Receives a list of instances (uuid, host, project_id)
+        Receives a list of instances
         Returns dictionary where the key is the host and the value is the list of instances running on the host
         """
         hosts = {}
         for inst in instances:
-            host = inst[1]
+            host = inst["host"]
             if (host in hosts):
                 hosts[host].append(inst)
             else:
@@ -48,32 +48,57 @@ class IsolationVerifier(Verifier):
         for host in hosts:
             project_id = None
             for inst in hosts[host]:
-                if (project_id != None and inst[2] != project_id):
-                    noncompliant_hosts.append(inst[1])
+                if (project_id != None and inst["project_id"] != project_id):
+                    noncompliant_hosts.append(inst["host"])
                 else:
-                    project_id = inst[2]
+                    project_id = inst["project_id"]
         return noncompliant_hosts
-
-    def saveReport(self, noncompliant_hosts):
-        """
-        Saves uncompliant hosts into openaudit DB
-        Returns number of rows inserted
-        """
-        sql_insert = "INSERT INTO openaudit.report_isolation (host) VALUES (%s)"
-        cursor = self.db_conn_local.cursor()
-        cursor.executemany(sql_insert, zip(noncompliant_hosts))
-        self.db_conn_local.commit()
-        return cursor.rowcount
-
-    def run(self):
-        hosts = self.verify(self.getDictHosts(self.getAllInstances()))
-        if not hosts:
-            self.saveReport(hosts)
-        return hosts
 
 
 class SecurityGroupsVerifier(Verifier):
-    pass
+    def getControllerData(self, snapshot_id):
+        """
+        Returns the security groups rules collected from the controller host in a snapshot
+        """
+        db_cursor = self.db_conn.cursor(dictionary=True)
+        db_cursor.execute(
+            "SELECT ALL "
+            "FROM openaudit.snapshot_securitygroups_controller "
+            "WHERE snapshot_id = %d",
+            (snapshot_id,)
+        )
+        return db_cursor.fetchall()
+
+    def getEndhostsData(self, snapshot_id):
+        """
+        Returns the security groups rules collected from the end hosts in a snapshot
+        """
+        db_cursor = self.db_conn.cursor(dictionary=True)
+        db_cursor.execute(
+            "SELECT ALL "
+            "FROM openaudit.snapshot_securitygroups_endhosts "
+            "WHERE snapshot_id = %d",
+            (snapshot_id,)
+        )
+        return db_cursor.fetchall()
+
+    def getDictInstances(self, rules):
+        """
+        Receives a list of rules
+        Returns dictionary where the key is the instance and the value is the list of security groups rules
+        """
+        instances = {}
+        for rule in rules:
+            inst = rule["instance"]
+            if (inst in instances):
+                instances[inst].append(rule)
+            else:
+                instances[inst] = [rule]
+        return instances
+
+
+    def verify(self, controller_data, endhost_data):
+        pass
 
 
 class RoutesVerifier(Verifier):
