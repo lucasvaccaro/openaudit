@@ -5,7 +5,7 @@ class Reporter:
     db_conn = None
     
     def __init__(self):
-        self.db_conn = db.DatabaseConnection("localDB")
+        self.db_conn = db.DatabaseConnection("openauditDB")
         self.db_conn = self.db_conn.getConn();
 
 

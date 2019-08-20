@@ -1,19 +1,30 @@
+from abc import ABCMeta, abstractmethod
 import database_connection as db
 
 
-class ControllerCollector:
+class ControllerCollector():
+    __metaclass__ = ABCMeta
+
     db_conn_stack = None
     db_conn_local = None
 
     def __init__(self):
         self.db_conn_stack = db.DatabaseConnection("openstackDB")
         self.db_conn_stack = self.db_conn_stack.getConn();
-        self.db_conn_local = db.DatabaseConnection("localDB")
+        self.db_conn_local = db.DatabaseConnection("openauditDB")
         self.db_conn_local = self.db_conn_local.getConn();
+
+    @abstractmethod
+    def getData(self):
+        pass
+
+    @abstractmethod
+    def saveData(self, data, snapshot_id):
+        pass
 
 
 class IsolationControllerCollector(ControllerCollector):
-    def getControllerData(self):
+    def getData(self):
         """
         Returns all the instances with their host and project
         """
@@ -25,10 +36,12 @@ class IsolationControllerCollector(ControllerCollector):
         )
         return db_cursor.fetchall()
 
-    def saveControllerData(self, controller_data, snapshot_id):
+    def saveData(self, data, snapshot_id):
+        if not data:
+            return 0
         sql_insert = "INSERT INTO openaudit.snapshot_isolation_controller (uuid, host, project_id, snapshot_id) VALUES (%s, %s, %s, %s)"
         cursor = self.db_conn_local.cursor()
-        for values in controller_data:
+        for values in data:
             _values = list(values)
             _values.append(snapshot_id)
             cursor.execute(sql_insert, _values)
@@ -37,7 +50,7 @@ class IsolationControllerCollector(ControllerCollector):
     
 
 class SecurityGroupsControllerCollector(ControllerCollector):
-    def getControllerData(self):
+    def getData(self):
         """
         Returns all the security groups nces with their host and project
         """
@@ -59,9 +72,13 @@ class SecurityGroupsControllerCollector(ControllerCollector):
         )
         return db_cursor.fetchall()
 
-    def saveControllerData(self):
+    def saveData(self, data, snapshot_id):
         db_cursor = self.db_conn_local.cursor()
 
 
 class RoutesControllerCollector(ControllerCollector):
-    pass
+    def getData(self):
+        pass
+
+    def saveData(self, data, snapshot_id):
+        pass

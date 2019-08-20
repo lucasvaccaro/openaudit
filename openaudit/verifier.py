@@ -1,11 +1,14 @@
+from abc import ABCMeta, abstractmethod
 import database_connection as db
 
 
 class Verifier:
+    __metaclass__ = ABCMeta
+    
     db_conn = None
 
     def __init__(self):
-        self.db_conn = db.DatabaseConnection("localDB")
+        self.db_conn = db.DatabaseConnection("openauditDB")
         self.db_conn = self.db_conn.getConn();
 
 
