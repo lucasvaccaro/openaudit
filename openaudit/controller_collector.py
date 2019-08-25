@@ -26,7 +26,7 @@ class ControllerCollector():
 class IsolationControllerCollector(ControllerCollector):
     def getData(self):
         """
-        Returns all the instances with their host and project
+        Returns all the instances with their host and project from the OpenStack DB
         """
         db_cursor = self.db_conn_stack.cursor()
         db_cursor.execute(
@@ -37,16 +37,21 @@ class IsolationControllerCollector(ControllerCollector):
         return db_cursor.fetchall()
 
     def saveData(self, data, snapshot_id):
+        """
+        Saves instances with their host, project and snapshot into OpenAudit DB
+        """
         if not data:
             return 0
         sql_insert = "INSERT INTO openaudit.snapshot_isolation_controller (uuid, host, project_id, snapshot_id) VALUES (%s, %s, %s, %s)"
         cursor = self.db_conn_local.cursor()
+        rowcount = 0
         for values in data:
             _values = list(values)
             _values.append(snapshot_id)
             cursor.execute(sql_insert, _values)
+            rowcount += cursor.rowcount
         self.db_conn_local.commit()
-        return cursor.rowcount
+        return rowcount
     
 
 class SecurityGroupsControllerCollector(ControllerCollector):

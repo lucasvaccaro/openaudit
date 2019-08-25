@@ -27,9 +27,22 @@ class IsolationVerifier(Verifier):
         )
         return db_cursor.fetchall()
 
-    def getDictHosts(self, instances):
+    def getComputeData(self, snapshot_id):
         """
-        Receives a list of instances
+        Returns the instances collected from the compute node hosts in a snapshot
+        """
+        db_cursor = self.db_conn.cursor(dictionary=True)
+        db_cursor.execute(
+            "SELECT uuid, host "
+            "FROM openaudit.snapshot_isolation_compute "
+            "WHERE snapshot_id = %d",
+            (snapshot_id,)
+        )
+        return db_cursor.fetchall()
+
+    def getDictHostsController(self, instances):
+        """
+        Receives a list of instances taken from the controller node
         Returns dictionary where the key is the host and the value is the list of instances running on the host
         """
         hosts = {}
@@ -41,21 +54,39 @@ class IsolationVerifier(Verifier):
                 hosts[host] = [inst]
         return hosts
 
-    def verify(self, hosts):
+    def getDictHostsCompute(self, instances):
+        """
+        Receives a list of hosts and instances taken from the compute nodes
+        Returns dictionary where the key is the host and the value is the list of instances running on the host
+        """
+        hosts = {}
+        for inst in instances:
+            host = inst["host"]
+            if (host in hosts):
+                hosts[host].append(inst["uuid"])
+            else:
+                hosts[host] = [inst["uuid"]]
+        return hosts
+
+    def verify(self, hosts_controller, hosts_compute):
         """
         Checks whether instances from different projects are running on the same host
-        Receives a dictionary of hosts
-        Returns an array of uncompliant instances
+        Checks whether instances from the database are missing in a compute node
+        Receives a dictionary of hosts (controller and compute)
+        Returns an array of uncompliant instances and missing instances
         """
         noncompliant_hosts = []
-        for host in hosts:
+        missing_instances = []
+        for host in hosts_controller:
             project_id = None
-            for inst in hosts[host]:
+            for inst in hosts_controller[host]:
                 if (project_id != None and inst["project_id"] != project_id):
                     noncompliant_hosts.append(inst["host"])
+                elif not inst["uuid"] in hosts_compute[host]:
+                    missing_instances.append(inst["uuid"])
                 else:
                     project_id = inst["project_id"]
-        return noncompliant_hosts
+        return (noncompliant_hosts, missing_instances)
 
 
 class SecurityGroupsVerifier(Verifier):
@@ -72,7 +103,7 @@ class SecurityGroupsVerifier(Verifier):
         )
         return db_cursor.fetchall()
 
-    def getEndhostsData(self, snapshot_id):
+    def getComputeData(self, snapshot_id):
         """
         Returns the security groups rules collected from the end hosts in a snapshot
         """
@@ -85,7 +116,7 @@ class SecurityGroupsVerifier(Verifier):
         )
         return db_cursor.fetchall()
 
-    def getDictInstances(self, rules):
+    def getDictInstancesController(self, rules):
         """
         Receives a list of rules
         Returns dictionary where the key is the instance and the value is the list of security groups rules

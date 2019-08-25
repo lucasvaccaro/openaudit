@@ -10,13 +10,23 @@ class Reporter:
 
 
 class IsolationReporter(Reporter):
-    def save(self, noncompliant_hosts):
+    def saveData(self, noncompliant_hosts, missing_instances):
         """
-        Saves uncompliant hosts into openaudit DB
+        Saves uncompliant hosts and missing instances into OpenAudit DB
         Returns number of rows inserted
         """
+        rowcount = 0
+
         sql_insert = "INSERT INTO openaudit.report_isolation (host) VALUES (%s)"
         cursor = self.db_conn.cursor()
         cursor.executemany(sql_insert, zip(noncompliant_hosts))
         self.db_conn.commit()
-        return cursor.rowcount
+        rowcount += cursor.rowcount
+
+        sql_insert = "INSERT INTO openaudit.report_isolation (uuid) VALUES (%s)"
+        cursor = self.db_conn.cursor()
+        cursor.executemany(sql_insert, zip(missing_instances))
+        self.db_conn.commit()
+        rowcount += cursor.rowcount
+
+        return rowcount

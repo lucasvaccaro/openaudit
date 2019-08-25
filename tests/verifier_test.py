@@ -10,22 +10,71 @@ class IsolationVerifierTest(unittest.TestCase):
     v = verifier.IsolationVerifier()
     r = reporter.IsolationReporter()
 
-    def testCompliant(self):
-        hosts = {
-            "server1": [{"uuid":"qwe", "host":"server1", "project_id":"p1"}, {"uuid":"asd", "host":"server1", "project_id":"p1"}],
-            "server2": [{"uuid":"poi", "host":"server2", "project_id":"p2"}, {"uuid":"lkj", "host":"server2", "project_id":"p2"}]
-        }
-        self.assertEqual(self.v.verify(hosts), [], "Should be empty")
+    def testCompliant1(self):
+        hosts_controller = [
+            {"uuid":"inst1", "host":"server1", "project_id":"p1"},
+            {"uuid":"inst2", "host":"server1", "project_id":"p1"},
+            {"uuid":"inst3", "host":"server2", "project_id":"p2"},
+            {"uuid":"inst4", "host":"server2", "project_id":"p2"}
+        ]
 
-    def testNoncompliant(self):
-        hosts = {
-            "server1": [{"uuid":"qwe", "host":"server1", "project_id":"p1"}, {"uuid":"asd", "host":"server1", "project_id":"p1"}],
-            "server2": [{"uuid":"poi", "host":"server2", "project_id":"p1"}, {"uuid":"lkj", "host":"server2", "project_id":"p2"}]
-        }
-        noncompliant_hosts = self.v.verify(hosts)
-        self.assertEqual(noncompliant_hosts, ["server2"], "Should contain 'server2'")
-        rows = self.r.save(noncompliant_hosts)
-        self.assertEqual(rows, 1, "Should be 1")
+        hosts_compute = [
+            {"uuid":"inst1", "host":"server1"},
+            {"uuid":"inst2", "host":"server1"},
+            {"uuid":"inst3", "host":"server2"},
+            {"uuid":"inst4", "host":"server2"}
+        ]
+
+        dict_hosts_controller = self.v.getDictHostsController(hosts_controller)
+        dict_hosts_compute = self.v.getDictHostsCompute(hosts_compute)
+
+        noncompliant_hosts, missing_instances = self.v.verify(dict_hosts_controller, dict_hosts_compute)
+
+        self.assertEqual(noncompliant_hosts, [], "Non-compliant hosts should be empty")
+        self.assertEqual(missing_instances, [], "Missing instances should be empty")
+
+    def testNoncompliant1(self):
+        hosts_controller = [
+            {"uuid":"inst1", "host":"server1", "project_id":"p1"},
+            {"uuid":"inst2", "host":"server1", "project_id":"p2"},
+            {"uuid":"inst3", "host":"server2", "project_id":"p2"},
+            {"uuid":"inst4", "host":"server2", "project_id":"p2"}
+        ]
+
+        hosts_compute = [
+            {"uuid":"inst1", "host":"server1"},
+            {"uuid":"inst2", "host":"server1"},
+            {"uuid":"inst3", "host":"server2"},
+            {"uuid":"inst4", "host":"server2"}
+        ]
+
+        dict_hosts_controller = self.v.getDictHostsController(hosts_controller)
+        dict_hosts_compute = self.v.getDictHostsCompute(hosts_compute)
+
+        noncompliant_hosts, missing_instances = self.v.verify(dict_hosts_controller, dict_hosts_compute)
+
+        self.assertEqual(noncompliant_hosts, ["server1"], "Should contain 'server1'")
+
+    def testNoncompliant2(self):
+        hosts_controller = [
+            {"uuid":"inst1", "host":"server1", "project_id":"p1"},
+            {"uuid":"inst2", "host":"server1", "project_id":"p1"},
+            {"uuid":"inst3", "host":"server2", "project_id":"p2"},
+            {"uuid":"inst4", "host":"server2", "project_id":"p2"}
+        ]
+
+        hosts_compute = [
+            {"uuid":"inst1", "host":"server1"},
+            {"uuid":"inst2", "host":"server1"},
+            {"uuid":"inst4", "host":"server2"}
+        ]
+
+        dict_hosts_controller = self.v.getDictHostsController(hosts_controller)
+        dict_hosts_compute = self.v.getDictHostsCompute(hosts_compute)
+
+        noncompliant_hosts, missing_instances = self.v.verify(dict_hosts_controller, dict_hosts_compute)
+
+        self.assertEqual(missing_instances, ["inst3"], "Should contain 'inst3'")
 
 
 if __name__ == '__main__':
