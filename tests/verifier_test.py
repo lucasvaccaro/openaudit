@@ -52,8 +52,10 @@ class IsolationVerifierTest(unittest.TestCase):
         dict_hosts_compute = self.v.getDictHostsCompute(hosts_compute)
 
         noncompliant_hosts, missing_instances = self.v.verify(dict_hosts_controller, dict_hosts_compute)
-
         self.assertEqual(noncompliant_hosts, ["server1"], "Should contain 'server1'")
+
+        rows = self.r.saveData(noncompliant_hosts, missing_instances)
+        self.assertEqual(rows, 1, "Should be 1")
 
     def testNoncompliant2(self):
         hosts_controller = [
@@ -73,8 +75,10 @@ class IsolationVerifierTest(unittest.TestCase):
         dict_hosts_compute = self.v.getDictHostsCompute(hosts_compute)
 
         noncompliant_hosts, missing_instances = self.v.verify(dict_hosts_controller, dict_hosts_compute)
-
         self.assertEqual(missing_instances, ["inst3"], "Should contain 'inst3'")
+
+        rows = self.r.saveData(noncompliant_hosts, missing_instances)
+        self.assertEqual(rows, 1, "Should be 1")
 
 
 if __name__ == '__main__':

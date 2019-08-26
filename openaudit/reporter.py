@@ -17,16 +17,18 @@ class IsolationReporter(Reporter):
         """
         rowcount = 0
 
-        sql_insert = "INSERT INTO openaudit.report_isolation (host) VALUES (%s)"
-        cursor = self.db_conn.cursor()
-        cursor.executemany(sql_insert, zip(noncompliant_hosts))
-        self.db_conn.commit()
-        rowcount += cursor.rowcount
+        if noncompliant_hosts:
+            sql_insert = "INSERT INTO openaudit.report_isolation (host) VALUES (%s)"
+            cursor = self.db_conn.cursor()
+            cursor.executemany(sql_insert, zip(noncompliant_hosts))
+            self.db_conn.commit()
+            rowcount += cursor.rowcount
 
-        sql_insert = "INSERT INTO openaudit.report_isolation (uuid) VALUES (%s)"
-        cursor = self.db_conn.cursor()
-        cursor.executemany(sql_insert, zip(missing_instances))
-        self.db_conn.commit()
-        rowcount += cursor.rowcount
+        if missing_instances:
+            sql_insert = "INSERT INTO openaudit.report_isolation (uuid) VALUES (%s)"
+            cursor = self.db_conn.cursor()
+            cursor.executemany(sql_insert, zip(missing_instances))
+            self.db_conn.commit()
+            rowcount += cursor.rowcount
 
         return rowcount
