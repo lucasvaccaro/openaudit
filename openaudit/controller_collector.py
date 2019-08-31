@@ -15,12 +15,24 @@ class ControllerCollector():
         self.db_conn_local = self.db_conn_local.getConn();
 
     @abstractmethod
-    def getData(self):
-        pass
+    def getData(self, sql):
+        db_cursor = self.db_conn_stack.cursor()
+        db_cursor.execute(sql)
+        return db_cursor.fetchall()
 
     @abstractmethod
-    def saveData(self, data, snapshot_id):
-        pass
+    def saveData(self, sql, data, snapshot_id):
+        if not data:
+            return 0
+        cursor = self.db_conn_local.cursor()
+        rowcount = 0
+        for values in data:
+            _values = list(values)
+            _values.append(snapshot_id)
+            cursor.execute(sql, _values)
+            rowcount += cursor.rowcount
+        self.db_conn_local.commit()
+        return rowcount
 
 
 class IsolationControllerCollector(ControllerCollector):
@@ -28,39 +40,26 @@ class IsolationControllerCollector(ControllerCollector):
         """
         Returns all the instances with their host and project from the OpenStack DB
         """
-        db_cursor = self.db_conn_stack.cursor()
-        db_cursor.execute(
+        sql = (
             "SELECT uuid, host, project_id "
             "FROM nova_cell1.instances "
             "WHERE deleted = 0 "
         )
-        return db_cursor.fetchall()
+        return super(IsolationControllerCollector, self).getData(sql)
 
     def saveData(self, data, snapshot_id):
         """
         Saves instances with their host, project and snapshot into OpenAudit DB
         """
-        if not data:
-            return 0
-        sql_insert = "INSERT INTO openaudit.snapshot_isolation_controller (uuid, host, project_id, snapshot_id) VALUES (%s, %s, %s, %s)"
-        cursor = self.db_conn_local.cursor()
-        rowcount = 0
-        for values in data:
-            _values = list(values)
-            _values.append(snapshot_id)
-            cursor.execute(sql_insert, _values)
-            rowcount += cursor.rowcount
-        self.db_conn_local.commit()
-        return rowcount
-    
+        sql = "INSERT INTO openaudit.snapshot_isolation_controller (uuid, host, project_id, snapshot_id) VALUES (%s, %s, %s, %s)"
+        return super(IsolationControllerCollector, self).saveData(sql, data, snapshot_id)
 
 class SecurityGroupsControllerCollector(ControllerCollector):
     def getData(self):
         """
         Returns all the security groups nces with their host and project
         """
-        db_cursor = self.db_conn_stack.cursor(dictionary=True)
-        db_cursor.execute(
+        sql = (
             "SELECT "
             "grup.id AS group_id, grup.name AS group_name, rule.direction, rule.ethertype, rule.protocol, "
             "rule.port_range_min, rule.port_range_max, rule.remote_ip_prefix, port.device_id AS instance "
@@ -75,15 +74,42 @@ class SecurityGroupsControllerCollector(ControllerCollector):
             "AND bind.port_id = port.id "
             "AND port.device_owner = \"compute:nova\""
         )
-        return db_cursor.fetchall()
+        return super(SecurityGroupsControllerCollector, self).getData(sql)
 
     def saveData(self, data, snapshot_id):
-        db_cursor = self.db_conn_local.cursor()
+        sql = ""
+        return super(SecurityGroupsControllerCollector, self).saveData(sql, data, snapshot_id)
 
 
 class RoutesControllerCollector(ControllerCollector):
     def getData(self):
-        pass
+        """
+        Returns all the security groups nces with their host and project
+        """
+        sql = (
+            "SELECT "
+            "router.id AS router_id, router.name, port.id AS port_id, subnet.cidr, subnet.gateway_ip "
+            "FROM "
+            "neutron.routers AS router, "
+            "neutron.ports AS port, "
+            "neutron.ml2_port_bindings AS bind, "
+            "neutron.networks AS net, "
+            "neutron.subnets AS subnet "
+            "WHERE "
+            "router.status = \"ACTIVE\" "
+            "AND router.id = port.device_id "
+            "AND port.network_id = net.id "
+            "AND subnet.network_id = net.id "
+            "AND bind.port_id = port.id "
+            "AND subnet.ip_version = 4 "
+            "GROUP BY "
+            "subnet.id"
+        )
+        return super(RoutesControllerCollector, self).getData(sql)
 
     def saveData(self, data, snapshot_id):
-        pass
+        """
+        Saves instances with their host, project and snapshot into OpenAudit DB
+        """
+        sql = "INSERT INTO openaudit.snapshot_routes_controller (router_id, name, port_id, cidr, gateway_ip, snapshot_id) VALUES (%s, %s, %s, %s, %s, %s)"
+        return super(RoutesControllerCollector, self).saveData(sql, data, snapshot_id)
