@@ -18,6 +18,27 @@ class IsolationComputeCollectorTest(unittest.TestCase):
         msg = "Result: " + str(res) + " Should be " + str(size)
         self.assertEqual(res, size, msg)
 
+
+class SecurityGroupsComputeCollectorTest(unittest.TestCase):
+
+    c = compute_collector.SecurityGroupsComputeCollector()
+
+    def test(self):
+        links = ["  1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 10007: br-int: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN mode DEFAULT group default qlen 1000", "      link/ether a2:5f:d1:b5:4d:4c brd ff:ff:ff:ff:ff:ff", " 8: br-ex: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000", "link/ether 76:dd:ad:22:ad:46 brd ff:ff:ff:ff:ff:ff", "9: br-tun: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000", "link/ether 02:07:fd:af:2d:4c brd ff:ff:ff:ff:ff:ff", "18: tap263581b9-3c: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc fq_codel master ovs-system state UNKNOWN mode DEFAULT group default qlen 1000", "link/ether fe:16:3e:af:8e:60 brd ff:ff:ff:ff:ff:ff"]
+        flows_e = ["table=72, priority=75,ct_state=+new-est,icmp,reg5=0x1 actions=resubmit(,73)", "  table=72, priority=75,ct_state=+new-est,udp,reg5=0x1,tp_dst=56 actions=resubmit(,73)"]
+        flows_i = ["    cookie=0xa711cf9f52b99a45, duration=2861.990s, table=82, n_packets=0, n_bytes=0, idle_age=2861, priority=70,ct_state=+est-rel-rpl,udp,reg5=0x5,dl_dst=fa:16:3e:7c:b9:5c,tp_dst=80 actions=strip_vlan,output:5", "cookie=0xa711cf9f52b99a45, duration=2861.989s, table=82, n_packets=0, n_bytes=0, idle_age=2861, priority=70,ct_state=+est-rel-rpl,tcp,reg5=0x5,dl_dst=fa:16:3e:7c:b9:5c,tp_dst=80 actions=strip_vlan,output:5", "cookie=0x35db15bbd3e62818, duration=304.998s, table=82, n_packets=0, n_bytes=0, priority=75,ct_state=+est-rel-rpl,icmp,reg5=0xc,dl_dst=fa:16:3e:7c:b9:5c,nw_src=10.2.0.0/16 actions=output:\"tap263581b9-3c\""]
+
+        ports = self.c.getPorts(links)
+        for uuid in ports:
+            self.c.getFlows(ports, uuid, flows_e, flows_i)
+
+        snapshot_id = 1
+        res = self.c.saveData(ports, snapshot_id)
+        size = 5
+        msg = "Result: " + str(res) + " Should be " + str(size)
+        self.assertEqual(res, size, msg)
+
+
 class RoutesComputeCollectorTest(unittest.TestCase):
 
     c = compute_collector.RoutesComputeCollector()

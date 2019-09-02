@@ -61,19 +61,105 @@ class IsolationComputeCollector(ComputeCollector):
     
 
 class SecurityGroupsComputeCollector(ComputeCollector):
+    """
+    Returns a dictionary of ports and their security rules
+    """
     def getData(self):
-        pass
+        # Get dict of ports
+        ports = self.getPorts()
+        for uuid in ports:
+            # Get routers` configuration
+            self.getFlows(ports, uuid)
+        return routers
 
-    def parseData(self, data):
-        pass
+    """
+    Gets all the ports (tap interfaces) in the host
+    Returns a dictionary where the key is the port's partial uuid (tap) with the mac address as one nested value
+    """
+    def getPorts(self, lines = None):
+        # Get namespaces
+        if lines is None:
+            lines = self.runCmd("ip link").strip().splitlines()
+        # Build map of ports where the key is the partial uuid from the tap iface
+        ports = {}
+        for i, item in enumerate(lines):
+            iface = item.strip().split()[1][:-1]
+            if iface.startswith("tap"):
+                uuid = iface[3:]
+                mac = lines[i+1].strip().split()[1]
+                ports[iface] = {"egress": [], "ingress": []}
+            i += 2
+        return ports
 
+    """
+    Gets all the flows that represent securiry groups of a port (tap iface)
+    """
+    def getFlows(self, ports, uuid, lines_eg = None, lines_ig = None):
+        if lines_eg is None:
+            cmd_eg = "ovs-ofctl dump-flows br-int table=72 | grep \"" + mac + "\""
+            lines_eg = self.runCmd(cmd).splitlines()
+
+        if lines_ig is None:
+            cmd_ig = "ovs-ofctl dump-flows br-int table=82 | grep \"" + mac + "\""
+            lines_ig = self.runCmd(cmd).splitlines()
+
+        for line in lines_eg:
+            protocol, cidr, port = self.parseFlow(line)
+            ports[uuid]["egress"].append([protocol, cidr, port])
+
+        for line in lines_ig:
+            protocol, cidr, port = self.parseFlow(line)
+            ports[uuid]["ingress"].append([protocol, cidr, port])
+
+    """
+    Extracts information from a flow line
+    """
+    def parseFlow(self, line):
+        protocol = None
+        cidr = None
+        port = None
+        elements = line.strip().split(",")
+        # Protocol
+        if "tcp" in elements:
+            protocol = "tcp"
+        elif "udp" in elements:
+            protocol = "udp"
+        elif "icmp" in elements:
+            protocol = "icmp"
+        # CIDR and port
+        for el in elements:
+            if el.startswith("nw_src"):
+                cidr = el[7:].split()[0]
+            elif el.startswith("tp_dst"):
+                port = el[7:].split()[0]
+        # Returb
+        return (protocol, cidr, port)
+
+    """
+    Saves data collected into OpenAudit DB
+    Returns number of rows inserted
+    """
     def saveData(self, data, snapshot_id):
-        pass
+        sql_insert = (
+            "INSERT INTO openaudit.snapshot_securitygroups_compute "
+            "(port_id, direction, protocol, cidr, port, snapshot_id) "
+            "VALUES (%s, %s, %s, %s, %s, %s)"
+        )
+        cursor = self.db_conn.cursor()
+        rowcount = 0
+        for uuid in data:
+            for direction, rules in data[uuid].items():
+                for rule in rules:
+                    values = (uuid[3:], direction, rule[0], rule[1], rule[2], snapshot_id)
+                    cursor.execute(sql_insert, values)
+                    rowcount += cursor.rowcount
+        self.db_conn.commit()
+        return rowcount
 
 
 class RoutesComputeCollector(ComputeCollector):
     """
-    Returns a dictionary of routes and their configuration
+    Returns a dictionary of routers and their configuration
     """
     def getData(self):
         # Get dict of routers
@@ -86,7 +172,7 @@ class RoutesComputeCollector(ComputeCollector):
 
     """
     Gets all the routers in the host
-    Returns a dictionary where the key is the router`s uuid
+    Returns a dictionary where the key is the router's uuid
     """
     def getRouters(self, lines = None):
         # Get namespaces
@@ -106,7 +192,7 @@ class RoutesComputeCollector(ComputeCollector):
     """ 
     def getInet(self, routers, uuid, lines = None):
         if lines is None:
-            cmd = "sudo ip netns exec qrouter-" + uuid + " ip -4 addr | grep inet"
+            cmd = "ip netns exec qrouter-" + uuid + " ip -4 addr | grep inet"
             lines = self.runCmd(cmd).strip().splitlines()
 
         lines.pop(0) # Remove loopback
@@ -124,9 +210,11 @@ class RoutesComputeCollector(ComputeCollector):
     """
     def getRoutes(self, routers, uuid, lines = None):
         if lines is None:
-            cmd = "sudo ip netns exec qrouter-" + uuid + " ip route"
+            cmd = "ip netns exec qrouter-" + uuid + " ip route"
             lines = self.runCmd(cmd).strip().splitlines()
+
         default_gw = lines.pop(0).split()[2] # Get default gateway
+        
         for line in lines:
             elements = line.strip().split()
             cidr = elements[0]

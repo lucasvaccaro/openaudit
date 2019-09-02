@@ -57,12 +57,13 @@ class IsolationControllerCollector(ControllerCollector):
 class SecurityGroupsControllerCollector(ControllerCollector):
     def getData(self):
         """
-        Returns all the security groups nces with their host and project
+        Returns all the security groups of active instaces ports from the OpenStack DB
         """
         sql = (
             "SELECT "
-            "grup.id AS group_id, grup.name AS group_name, rule.direction, rule.ethertype, rule.protocol, "
-            "rule.port_range_min, rule.port_range_max, rule.remote_ip_prefix, port.device_id AS instance "
+            "grup.id AS group_id, grup.name AS group_name, rule.direction, "
+            "rule.protocol, rule.port_range_min, rule.port_range_max,"
+            "rule.remote_ip_prefix, port.device_id AS inst_uuid, port.id AS port_id "
             "FROM "
             "neutron.securitygroups AS grup, "
             "neutron.securitygrouprules AS rule, "
@@ -72,12 +73,17 @@ class SecurityGroupsControllerCollector(ControllerCollector):
             "grup.id = rule.security_group_id "
             "AND bind.security_group_id = grup.id "
             "AND bind.port_id = port.id "
-            "AND port.device_owner = \"compute:nova\""
+            "AND port.device_owner = \"compute:nova\" "
+            "AND port.status = \"ACTIVE\""
         )
         return super(SecurityGroupsControllerCollector, self).getData(sql)
 
     def saveData(self, data, snapshot_id):
-        sql = ""
+        sql = (
+            "INSERT INTO openaudit.snapshot_securitygroups_controller "
+            "(group_id, group_name, direction, protocol, port_min, port_max, remote_ip, port_id, inst_uuid, snapshot_id) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        )
         return super(SecurityGroupsControllerCollector, self).saveData(sql, data, snapshot_id)
 
 
@@ -110,5 +116,9 @@ class RoutesControllerCollector(ControllerCollector):
         """
         Saves instances with their host, project and snapshot into OpenAudit DB
         """
-        sql = "INSERT INTO openaudit.snapshot_routes_controller (router_id, name, port_id, cidr, gateway_ip, snapshot_id) VALUES (%s, %s, %s, %s, %s, %s)"
+        sql = (
+            "INSERT INTO openaudit.snapshot_routes_controller "
+            "(router_id, name, port_id, cidr, gateway_ip, snapshot_id) "
+            "VALUES (%s, %s, %s, %s, %s, %s)"
+        )
         return super(RoutesControllerCollector, self).saveData(sql, data, snapshot_id)
