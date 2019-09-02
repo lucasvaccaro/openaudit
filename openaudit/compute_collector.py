@@ -72,6 +72,9 @@ class SecurityGroupsComputeCollector(ComputeCollector):
 
 
 class RoutesComputeCollector(ComputeCollector):
+    """
+    Returns a dictionary of routes and their configuration
+    """
     def getData(self):
         # Get dict of routers
         routers = self.getRouters()
@@ -81,11 +84,11 @@ class RoutesComputeCollector(ComputeCollector):
             self.getRoutes(routers, uuid)
         return routers
 
+    """
+    Gets all the routers in the host
+    Returns a dictionary where the key is the router`s uuid
+    """
     def getRouters(self, lines = None):
-        """
-        Gets all the routers in the host
-        Returns a dictionary where the key is the router`s uuid
-        """
         # Get namespaces
         if lines is None:
             lines = self.runCmd("ip netns").strip().splitlines()
@@ -98,14 +101,16 @@ class RoutesComputeCollector(ComputeCollector):
                 routers[uuid] = {}
         return routers
 
+    """
+    Gets the IP address of each interface of a router
+    """ 
     def getInet(self, routers, uuid, lines = None):
-        """
-        Gets the IP address of each interface of a router
-        """
         if lines is None:
             cmd = "sudo ip netns exec qrouter-" + uuid + " ip -4 addr | grep inet"
             lines = self.runCmd(cmd).strip().splitlines()
+
         lines.pop(0) # Remove loopback
+
         for line in lines:
             elements = line.strip().split()
             inet = elements[1]
@@ -114,10 +119,10 @@ class RoutesComputeCollector(ComputeCollector):
                 routers[uuid][iface] = {}
             routers[uuid][iface].update({"inet": inet})
 
+    """
+    Gets the routing table of a router
+    """
     def getRoutes(self, routers, uuid, lines = None):
-        """
-        Gets the routing table of a router
-        """
         if lines is None:
             cmd = "sudo ip netns exec qrouter-" + uuid + " ip route"
             lines = self.runCmd(cmd).strip().splitlines()
@@ -131,6 +136,10 @@ class RoutesComputeCollector(ComputeCollector):
                 routers[uuid][iface] = {}
             routers[uuid][iface].update({"cidr": cidr, "src": src, "default_gw": default_gw})
     
+    """
+    Saves data collected into OpenAudit DB
+    Returns number of rows inserted
+    """
     def saveData(self, data, snapshot_id):
         sql_insert = "INSERT INTO openaudit.snapshot_routes_compute (uuid, iface, inet, cidr, src, default_gw, snapshot_id) VALUES (%s, %s, %s, %s, %s, %s, %s)"
         cursor = self.db_conn.cursor()
