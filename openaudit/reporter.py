@@ -1,4 +1,5 @@
 import database_connection as db
+from abc import ABCMeta, abstractmethod
 
 
 class Reporter:
@@ -10,25 +11,53 @@ class Reporter:
 
 
 class IsolationReporter(Reporter):
-    def saveData(self, noncompliant_hosts, missing_instances):
-        """
-        Saves uncompliant hosts and missing instances into OpenAudit DB
-        Returns number of rows inserted
-        """
+
+    """
+    Saves uncompliant hosts and missing instances into OpenAudit DB
+    Returns number of rows inserted
+    """
+    def saveData(self, snapshot_id, noncompliant_hosts, missing_instances):
+        
         rowcount = 0
 
         if noncompliant_hosts:
-            sql_insert = "INSERT INTO openaudit.report_isolation (host) VALUES (%s)"
+            sql_insert = "INSERT INTO openaudit.report_isolation (snapshot_id, host) VALUES (%s, %s)"
             cursor = self.db_conn.cursor()
-            cursor.executemany(sql_insert, zip(noncompliant_hosts))
+            for host in noncompliant_hosts:
+                cursor.execute(sql_insert, (snapshot_id, host))
+                rowcount += cursor.rowcount
             self.db_conn.commit()
-            rowcount += cursor.rowcount
-
+            
         if missing_instances:
-            sql_insert = "INSERT INTO openaudit.report_isolation (uuid) VALUES (%s)"
+            sql_insert = "INSERT INTO openaudit.report_isolation (snapshot_id, uuid) VALUES (%s, %s)"
             cursor = self.db_conn.cursor()
-            cursor.executemany(sql_insert, zip(missing_instances))
+            for inst in missing_instances:
+                cursor.execute(sql_insert, (snapshot_id, inst))
+                rowcount += cursor.rowcount
             self.db_conn.commit()
+
+        return rowcount
+
+
+class SecurityGroupsReporter(Reporter):
+    def saveData(self):
+        pass
+
+
+class RoutesReporter(Reporter):
+    """
+    Saves inconsistent routes into OpenAudit DB
+    Returns number of rows inserted
+    """ 
+    def saveData(self, snapshot_id, inconsistent_routes):
+        
+        rowcount = 0
+
+        sql_insert = "INSERT INTO openaudit.report_routes (router_id, port_id, snapshot_id) VALUES (%s, %s, %s)"
+        cursor = self.db_conn.cursor()
+        for routes in inconsistent_routes:
+            cursor.execute(sql_insert, routes + (snapshot_id,))
             rowcount += cursor.rowcount
+        self.db_conn.commit()
 
         return rowcount
