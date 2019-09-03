@@ -25,29 +25,30 @@ class ComputeCollector():
 
 
 class IsolationComputeCollector(ComputeCollector):
-    """
-    Returns ouput of OS commands 'hostname' and 'virsh'
-    """ 
+     
     def getData(self):
+        """
+        Returns ouput of OS commands 'hostname' and 'virsh'
+        """
         host = self.runCmd("hostname")
         vms = self.runCmd("virsh list --uuid")
         return (host, vms)
 
-    """
-    Parses the raw data
-    Returns formatted data
-    """
     def parseData(self, data):
+        """
+        Parses the raw data
+        Returns formatted data
+        """
         host, vms = data
         host = host.strip()
         vms = vms.strip().splitlines()
         return (host, vms)
 
-    """
-    Saves data collected into OpenAudit DB
-    Returns number of rows inserted
-    """
     def saveData(self, data, snapshot_id):
+        """
+        Saves data collected into OpenAudit DB
+        Returns number of rows inserted
+        """
         host, vms = data
         sql_insert = "INSERT INTO openaudit.snapshot_isolation_compute (uuid, host, snapshot_id) VALUES (%s, %s, %s)"
         cursor = self.db_conn.cursor()
@@ -61,10 +62,11 @@ class IsolationComputeCollector(ComputeCollector):
     
 
 class SecurityGroupsComputeCollector(ComputeCollector):
-    """
-    Returns a dictionary of ports and their security rules
-    """
+    
     def getData(self):
+        """
+        Returns a dictionary of ports and their security rules
+        """
         # Get dict of ports
         ports = self.getPorts()
         for uuid in ports:
@@ -72,11 +74,12 @@ class SecurityGroupsComputeCollector(ComputeCollector):
             self.getFlows(ports, uuid)
         return routers
 
-    """
-    Gets all the ports (tap interfaces) in the host
-    Returns a dictionary where the key is the port's partial uuid (tap) with the mac address as one nested value
-    """
+    
     def getPorts(self, lines = None):
+        """
+        Gets all the ports (tap interfaces) in the host
+        Returns a dictionary where the key is the port's partial uuid (tap) with the mac address as one nested value
+        """
         # Get namespaces
         if lines is None:
             lines = self.runCmd("ip link").strip().splitlines()
@@ -91,10 +94,10 @@ class SecurityGroupsComputeCollector(ComputeCollector):
             i += 2
         return ports
 
-    """
-    Gets all the flows that represent securiry groups of a port (tap iface)
-    """
     def getFlows(self, ports, uuid, lines_eg = None, lines_ig = None):
+        """
+        Gets all the flows that represent securiry groups of a port (tap iface)
+        """
         if lines_eg is None:
             cmd_eg = "ovs-ofctl dump-flows br-int table=72 | grep \"" + mac + "\""
             lines_eg = self.runCmd(cmd).splitlines()
@@ -111,10 +114,10 @@ class SecurityGroupsComputeCollector(ComputeCollector):
             protocol, cidr, port = self.parseFlow(line)
             ports[uuid]["ingress"].append([protocol, cidr, port])
 
-    """
-    Extracts information from a flow line
-    """
     def parseFlow(self, line):
+        """
+        Extracts information from a flow line
+        """
         protocol = None
         cidr = None
         port = None
@@ -135,11 +138,11 @@ class SecurityGroupsComputeCollector(ComputeCollector):
         # Returb
         return (protocol, cidr, port)
 
-    """
-    Saves data collected into OpenAudit DB
-    Returns number of rows inserted
-    """
     def saveData(self, data, snapshot_id):
+        """
+        Saves data collected into OpenAudit DB
+        Returns number of rows inserted
+        """
         sql_insert = (
             "INSERT INTO openaudit.snapshot_securitygroups_compute "
             "(port_id, direction, protocol, cidr, port, snapshot_id) "
@@ -158,10 +161,11 @@ class SecurityGroupsComputeCollector(ComputeCollector):
 
 
 class RoutesComputeCollector(ComputeCollector):
-    """
-    Returns a dictionary of routers and their configuration
-    """
+    
     def getData(self):
+        """
+        Returns a dictionary of routers and their configuration
+        """
         # Get dict of routers
         routers = self.getRouters()
         for uuid in routers:
@@ -170,11 +174,11 @@ class RoutesComputeCollector(ComputeCollector):
             self.getRoutes(routers, uuid)
         return routers
 
-    """
-    Gets all the routers in the host
-    Returns a dictionary where the key is the router's uuid
-    """
     def getRouters(self, lines = None):
+        """
+        Gets all the routers in the host
+        Returns a dictionary where the key is the router's uuid
+        """
         # Get namespaces
         if lines is None:
             lines = self.runCmd("ip netns").strip().splitlines()
@@ -186,11 +190,11 @@ class RoutesComputeCollector(ComputeCollector):
                 uuid = net[8:44]
                 routers[uuid] = {}
         return routers
-
-    """
-    Gets the IP address of each interface of a router
-    """ 
+ 
     def getInet(self, routers, uuid, lines = None):
+        """
+        Gets the IP address of each interface of a router
+        """
         if lines is None:
             cmd = "ip netns exec qrouter-" + uuid + " ip -4 addr | grep inet"
             lines = self.runCmd(cmd).strip().splitlines()
@@ -205,10 +209,10 @@ class RoutesComputeCollector(ComputeCollector):
                 routers[uuid][iface] = {}
             routers[uuid][iface].update({"inet": inet})
 
-    """
-    Gets the routing table of a router
-    """
     def getRoutes(self, routers, uuid, lines = None):
+        """
+        Gets the routing table of a router
+        """
         if lines is None:
             cmd = "ip netns exec qrouter-" + uuid + " ip route"
             lines = self.runCmd(cmd).strip().splitlines()
@@ -224,11 +228,11 @@ class RoutesComputeCollector(ComputeCollector):
                 routers[uuid][iface] = {}
             routers[uuid][iface].update({"cidr": cidr, "src": src, "default_gw": default_gw})
     
-    """
-    Saves data collected into OpenAudit DB
-    Returns number of rows inserted
-    """
     def saveData(self, data, snapshot_id):
+        """
+        Saves data collected into OpenAudit DB
+        Returns number of rows inserted
+        """
         sql_insert = "INSERT INTO openaudit.snapshot_routes_compute (uuid, iface, inet, cidr, src, default_gw, snapshot_id) VALUES (%s, %s, %s, %s, %s, %s, %s)"
         cursor = self.db_conn.cursor()
         rowcount = 0

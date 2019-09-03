@@ -12,11 +12,11 @@ class Reporter:
 
 class IsolationReporter(Reporter):
 
-    """
-    Saves uncompliant hosts and missing instances into OpenAudit DB
-    Returns number of rows inserted
-    """
     def saveData(self, snapshot_id, noncompliant_hosts, missing_instances):
+        """
+        Saves uncompliant hosts and missing instances into OpenAudit DB
+        Returns number of rows inserted
+        """
         
         rowcount = 0
 
@@ -40,11 +40,12 @@ class IsolationReporter(Reporter):
 
 
 class SecurityGroupsReporter(Reporter):
-    """
-    Saves inconsistent ports into OpenAudit DB
-    Returns number of rows inserted
-    """
+
     def saveData(self, snapshot_id, inconsistent_ports):
+        """
+        Saves inconsistent ports into OpenAudit DB
+        Returns number of rows inserted
+        """
         rowcount = 0
         sql_insert = "INSERT INTO openaudit.report_securitygroups (port_id, snapshot_id) VALUES (%s, %s)"
         cursor = self.db_conn.cursor()
@@ -54,12 +55,14 @@ class SecurityGroupsReporter(Reporter):
         self.db_conn.commit()
         return rowcount
 
+
 class RoutesReporter(Reporter):
-    """
-    Saves inconsistent routes into OpenAudit DB
-    Returns number of rows inserted
-    """ 
+     
     def saveData(self, snapshot_id, inconsistent_routes):
+        """
+        Saves inconsistent routes into OpenAudit DB
+        Returns number of rows inserted
+        """
         rowcount = 0
         sql_insert = "INSERT INTO openaudit.report_routes (router_id, port_id, snapshot_id) VALUES (%s, %s, %s)"
         cursor = self.db_conn.cursor()

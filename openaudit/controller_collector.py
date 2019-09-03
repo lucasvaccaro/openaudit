@@ -36,6 +36,7 @@ class ControllerCollector():
 
 
 class IsolationControllerCollector(ControllerCollector):
+
     def getData(self):
         """
         Returns all the instances with their host and project from the OpenStack DB
@@ -55,6 +56,7 @@ class IsolationControllerCollector(ControllerCollector):
         return super(IsolationControllerCollector, self).saveData(sql, data, snapshot_id)
 
 class SecurityGroupsControllerCollector(ControllerCollector):
+
     def getData(self):
         """
         Returns all the security groups of active instaces ports from the OpenStack DB
@@ -88,6 +90,7 @@ class SecurityGroupsControllerCollector(ControllerCollector):
 
 
 class RoutesControllerCollector(ControllerCollector):
+    
     def getData(self):
         """
         Returns all the security groups nces with their host and project
