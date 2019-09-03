@@ -82,6 +82,72 @@ class IsolationVerifierTest(unittest.TestCase):
         self.assertEqual(rows, 1, "Should be 1")
 
 
+class SecurityGroupsVerifierTest(unittest.TestCase):
+
+    v = verifier.SecurityGroupsVerifier()
+    r = reporter.SecurityGroupsReporter()
+    snapshot_id = 1
+
+    def testCompliant1(self):
+        
+        secgroups_controller = [
+            {"group_id": '153601dd-2606-487e-8405-cf9242d49b6e', "group_name": 'default', "direction": 'egress', "protocol": None, "port_min": None, "port_max": None, "remote_ip": None, "port_id": '505f8fea-8e12-404c-8789-d769e728449d', "inst_uuid": '927a447e-0884-4a53-9016-f731503a9c9b'},
+            {"group_id": '153601dd-2606-487e-8405-cf9242d49b6e', "group_name": 'default', "direction": 'ingress', "protocol": "tcp", "port_min": "80", "port_max": "80", "remote_ip": None, "port_id": '505f8fea-8e12-404c-8789-d769e728449d', "inst_uuid": '927a447e-0884-4a53-9016-f731503a9c9b'},
+            {"group_id": '153601dd-2606-487e-8405-cf9242d49b6e', "group_name": 'default', "direction": 'ingress', "protocol": "tcp", "port_min": "22", "port_max": "22", "remote_ip": "10.2.0.0/16", "port_id": '505f8fea-8e12-404c-8789-d769e728449d', "inst_uuid": '927a447e-0884-4a53-9016-f731503a9c9b'},
+            {"group_id": 'cf9242d4-2606-487e-8405-153601dd9b6e', "group_name": 'default', "direction": 'ingress', "protocol": "tcp", "port_min": "8443", "port_max": "8445", "remote_ip": None, "port_id": 'd769e728-e912-404c-8789-505f8fea449d', "inst_uuid": '927a447e-0884-4a53-9016-f731503a9c9b'},
+            {"group_id": 'cf9242d4-2606-487e-8405-153601dd9b6e', "group_name": 'default', "direction": 'ingress', "protocol": "udp", "port_min": "55", "port_max": "56", "remote_ip": "8.8.0.0/16", "port_id": 'd769e728-e912-404c-8789-505f8fea449d', "inst_uuid": '927a447e-0884-4a53-9016-f731503a9c9b'}
+        ]
+
+        secgroups_compute = [
+            {"direction": 'egress', "protocol": None, "port": None, "cidr": None, "port_id": '505f8fea-8e'},
+            {"direction": 'ingress', "protocol": "tcp", "port": "80", "cidr": None, "port_id": '505f8fea-8e'},
+            {"direction": 'ingress', "protocol": "tcp", "port": "80", "cidr": None, "port_id": '505f8fea-8e'},
+            {"direction": 'ingress', "protocol": "tcp", "port": "22", "cidr": "10.2.0.0/16", "port_id": '505f8fea-8e'},
+            {"direction": 'ingress', "protocol": "tcp", "port": "22", "cidr": "10.2.0.0/16", "port_id": '505f8fea-8e'},
+            {"direction": 'ingress', "protocol": "tcp", "port": "8443", "cidr": None, "port_id": 'd769e728-e9'},
+            {"direction": 'ingress', "protocol": "tcp", "port": "8445", "cidr": None, "port_id": 'd769e728-e9'},
+            {"direction": 'ingress', "protocol": "udp", "port": "55", "cidr": "8.8.0.0/16", "port_id": 'd769e728-e9'},
+            {"direction": 'ingress', "protocol": "udp", "port": "56", "cidr": "8.8.0.0/16", "port_id": 'd769e728-e9'}
+        ]
+
+        dict_secgroups_controller = self.v.getDictSecurityGroupsController(secgroups_controller)
+        dict_secgroups_compute = self.v.getDictSecurityGroupsCompute(secgroups_compute)
+
+        inconsistent_ports = self.v.verify(dict_secgroups_controller, dict_secgroups_compute)
+        self.assertEqual(inconsistent_ports, [], "Inconsistent rules should be empty")
+
+    def testNonCompliant1(self):
+        
+        secgroups_controller = [
+            {"group_id": '153601dd-2606-487e-8405-cf9242d49b6e', "group_name": 'default', "direction": 'egress', "protocol": None, "port_min": None, "port_max": None, "remote_ip": None, "port_id": '505f8fea-8e12-404c-8789-d769e728449d', "inst_uuid": '927a447e-0884-4a53-9016-f731503a9c9b'},
+            {"group_id": '153601dd-2606-487e-8405-cf9242d49b6e', "group_name": 'default', "direction": 'ingress', "protocol": "tcp", "port_min": "80", "port_max": "80", "remote_ip": "174.4.0.0/16", "port_id": '505f8fea-8e12-404c-8789-d769e728449d', "inst_uuid": '927a447e-0884-4a53-9016-f731503a9c9b'},
+            {"group_id": '153601dd-2606-487e-8405-cf9242d49b6e', "group_name": 'default', "direction": 'ingress', "protocol": "tcp", "port_min": "22", "port_max": "22", "remote_ip": "10.2.0.0/16", "port_id": 'fea505f8-4k12-404c-8789-d769e728449d', "inst_uuid": '927a447e-0884-4a53-9016-f731503a9c9b'},
+            {"group_id": 'cf9242d4-2606-487e-8405-153601dd9b6e', "group_name": 'default', "direction": 'ingress', "protocol": "tcp", "port_min": "8443", "port_max": "8445", "remote_ip": None, "port_id": 'd769e728-e912-404c-8789-505f8fea449d', "inst_uuid": '927a447e-0884-4a53-9016-f731503a9c9b'},
+            {"group_id": 'cf9242d4-2606-487e-8405-153601dd9b6e', "group_name": 'default', "direction": 'ingress', "protocol": "udp", "port_min": "55", "port_max": "56", "remote_ip": "8.8.0.0/16", "port_id": 'd769e728-e912-404c-8789-505f8fea449d', "inst_uuid": '927a447e-0884-4a53-9016-f731503a9c9b'}
+        ]
+
+        secgroups_compute = [
+            {"direction": 'egress', "protocol": None, "port": None, "cidr": None, "port_id": '505f8fea-8e'},
+            {"direction": 'ingress', "protocol": "tcp", "port": "80", "cidr": None, "port_id": '505f8fea-8e'},
+            {"direction": 'ingress', "protocol": "tcp", "port": "80", "cidr": None, "port_id": '505f8fea-8e'},
+            {"direction": 'ingress', "protocol": "tcp", "port": "22", "cidr": "10.2.0.0/16", "port_id": 'fea505f8-4k'},
+            {"direction": 'ingress', "protocol": "tcp", "port": "22", "cidr": "10.2.0.0/16", "port_id": 'fea505f8-4k'},
+            {"direction": 'ingress', "protocol": "tcp", "port": None, "cidr": None, "port_id": 'd769e728-e9'},
+            {"direction": 'ingress', "protocol": "tcp", "port": None, "cidr": None, "port_id": 'd769e728-e9'},
+            {"direction": 'ingress', "protocol": "udp", "port": "55", "cidr": None, "port_id": 'd769e728-e9'},
+            {"direction": 'ingress', "protocol": "udp", "port": "56", "cidr": "172.22.0.0/16", "port_id": 'd769e728-e9'}
+        ]
+
+        dict_secgroups_controller = self.v.getDictSecurityGroupsController(secgroups_controller)
+        dict_secgroups_compute = self.v.getDictSecurityGroupsCompute(secgroups_compute)
+
+        inconsistent_ports = self.v.verify(dict_secgroups_controller, dict_secgroups_compute)
+        self.assertEqual(inconsistent_ports, ["505f8fea-8e12-404c-8789-d769e728449d", "d769e728-e912-404c-8789-505f8fea449d"], "Inconsistent rules should contain 505f8fea-8e and d769e728-e9")
+
+        rows = self.r.saveData(self.snapshot_id, inconsistent_ports)
+        self.assertEqual(rows, 2, "Should be 2")
+
+
 class RoutesVerifierTest(unittest.TestCase):
 
     v = verifier.RoutesVerifier()

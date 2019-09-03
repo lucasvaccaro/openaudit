@@ -40,9 +40,19 @@ class IsolationReporter(Reporter):
 
 
 class SecurityGroupsReporter(Reporter):
-    def saveData(self):
-        pass
-
+    """
+    Saves inconsistent ports into OpenAudit DB
+    Returns number of rows inserted
+    """
+    def saveData(self, snapshot_id, inconsistent_ports):
+        rowcount = 0
+        sql_insert = "INSERT INTO openaudit.report_securitygroups (port_id, snapshot_id) VALUES (%s, %s)"
+        cursor = self.db_conn.cursor()
+        for port in inconsistent_ports:
+            cursor.execute(sql_insert, (port, snapshot_id))
+            rowcount += cursor.rowcount
+        self.db_conn.commit()
+        return rowcount
 
 class RoutesReporter(Reporter):
     """
@@ -50,14 +60,11 @@ class RoutesReporter(Reporter):
     Returns number of rows inserted
     """ 
     def saveData(self, snapshot_id, inconsistent_routes):
-        
         rowcount = 0
-
         sql_insert = "INSERT INTO openaudit.report_routes (router_id, port_id, snapshot_id) VALUES (%s, %s, %s)"
         cursor = self.db_conn.cursor()
         for routes in inconsistent_routes:
             cursor.execute(sql_insert, routes + (snapshot_id,))
             rowcount += cursor.rowcount
         self.db_conn.commit()
-
         return rowcount

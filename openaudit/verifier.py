@@ -1,6 +1,7 @@
 import database_connection as db
 from abc import ABCMeta, abstractmethod
 import ipaddress
+import pdb
 
 
 class Verifier:
@@ -28,7 +29,8 @@ class Verifier:
 
     def toDict(self, ls, attr):
         """
-        Receives a list and returns a dictionary where the key is a common attribute
+        Receives a list and an attribute
+        Rturns a dictionary where the key is the attribute and the value is a list of properties collected
         """
         dic = {}
         for item in ls:
@@ -117,12 +119,72 @@ class SecurityGroupsVerifier(Verifier):
 
     def getComputeData(self, snapshot_id):
         """
-        Returns the security groups rules collected from the end hosts in a snapshot
+        Returns the security groups rules collected from the compute nodes in a snapshot
         """
         return self.getData(snapshot_id, "snapshot_securitygroups_compute")
 
+    def getDictSecurityGroupsController(self, security_groups):
+        """
+        Receives a list of security groups taken from the controller node
+        Returns dictionary where the key is the port ID and the value is the list of rules
+        """
+        return self.toDict(security_groups, "port_id")
+
+    def getDictSecurityGroupsCompute(self, security_groups):
+        """
+        Receives a list of security groups taken from the compute nodes
+        Returns dictionary where the key is the port ID and the value is the list of rules
+        """
+        return self.toDict(security_groups, "port_id")
+
     def verify(self, controller_data, compute_data):
-        pass
+        """
+        Performs the verirication process against the data collected
+        Returns a list of inconsistent ports
+        """
+        inconsistent_ports = []
+        for ctl_port in controller_data:
+            cmp_port = self.findComputePort(compute_data, ctl_port)
+            if not self.verifyRules(controller_data[ctl_port], compute_data[cmp_port]):
+                inconsistent_ports.append(ctl_port)
+        return inconsistent_ports
+
+    def findComputePort(self, controller_data, ctl_port_id):
+        """
+        Searches a port among compute rules
+        """
+        for cmp_port_id in controller_data:
+            if ctl_port_id.startswith(cmp_port_id):
+                return cmp_port_id
+        return None
+
+    def verifyRules(self, ctl_port_rules, cmp_port_rules):
+        """
+        Runs the tests against the controller and compute interfaces
+        Returns True if all controller rules have been found and there are no remaining rules in the compute node, False otherwise
+        """
+        rules_ctl_remaining = len(ctl_port_rules)
+        rules_cmp_remaining = len(cmp_port_rules)
+        for ctl_rule in ctl_port_rules:
+            found = False
+            for cmp_rule in cmp_port_rules:
+                # Compare values
+                direction = ctl_rule["direction"] == cmp_rule["direction"]
+                protocol = ctl_rule["protocol"] == cmp_rule["protocol"]
+                cidr = ctl_rule["remote_ip"] == cmp_rule["cidr"]
+                if (protocol == "icmp"):
+                    port = True # icmp has no port
+                else:
+                    port = cmp_rule["port"] == ctl_rule["port_min"] or cmp_rule["port"] == ctl_rule["port_max"]
+                # Assert
+                if direction and protocol and cidr and port:
+                    found = True
+                    rules_cmp_remaining -= 1
+                # Dont break the loop because the rules can repeat in the compute node (e.g. max/min port)
+            # If rule was found at least once
+            if found:
+                rules_ctl_remaining -= 1
+        return rules_ctl_remaining == 0 and rules_cmp_remaining == rules_ctl_remaining
 
 
 class RoutesVerifier(Verifier):
@@ -153,6 +215,9 @@ class RoutesVerifier(Verifier):
         return self.toDict(routes, "uuid")
 
     def verify(self, controller_data, compute_data):
+        """
+        Performs the verirication process against the data collected
+        """
         inconsistent_routes = []
         for router_id in compute_data:
             for cmp_iface in compute_data[router_id]:
@@ -160,7 +225,6 @@ class RoutesVerifier(Verifier):
                 if not self.verifyInterfaces(ctl_iface, cmp_iface):
                     inconsistent_routes.append((ctl_iface["router_id"], ctl_iface["port_id"]))
         return inconsistent_routes
-
 
     def findControllerIface(self, controller_data, iface_name):
         """
