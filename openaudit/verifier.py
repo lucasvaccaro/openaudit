@@ -1,7 +1,6 @@
 import database_connection as db
 from abc import ABCMeta, abstractmethod
 import ipaddress
-import pdb
 
 
 class Verifier:
@@ -217,22 +216,23 @@ class RoutesVerifier(Verifier):
     def verify(self, controller_data, compute_data):
         """
         Performs the verirication process against the data collected
+        Returns a list of inconsistent routes (router ID and port ID)
         """
         inconsistent_routes = []
-        for router_id in compute_data:
-            for cmp_iface in compute_data[router_id]:
-                ctl_iface = self.findControllerIface(controller_data, cmp_iface["iface"])
-                if not self.verifyInterfaces(ctl_iface, cmp_iface):
+        for router_id in controller_data:
+            for ctl_iface in controller_data[router_id]:
+                cmp_iface = self.findComputeIface(compute_data, ctl_iface["port_id"])
+                if cmp_iface is None or not self.verifyInterfaces(ctl_iface, cmp_iface):
                     inconsistent_routes.append((ctl_iface["router_id"], ctl_iface["port_id"]))
         return inconsistent_routes
 
-    def findControllerIface(self, controller_data, iface_name):
+    def findComputeIface(self, compute_data, iface_name):
         """
-        Searches an interface among controller routes
+        Searches an interface among routes from the compute node
         """
-        for router_id in controller_data:
-            for iface in controller_data[router_id]:
-                if iface["port_id"].startswith(iface_name[3:]):
+        for router_id in compute_data:
+            for iface in compute_data[router_id]:
+                if iface_name.startswith(iface["iface"][3:]):
                     return iface
         return None
 

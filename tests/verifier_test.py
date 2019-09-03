@@ -215,6 +215,27 @@ class RoutesVerifierTest(unittest.TestCase):
         rows = self.r.saveData(self.snapshot_id, inconsistent_routes)
         self.assertEqual(rows, 2, "Should be 2")
 
+    def testNonCompliant3(self):
+        routes_controller = [
+            {"router_id": '5ed262ef-920f-4e51-a0a1-5021f1671288', "name": 'router1', "port_id": 'f94db071-e123-45d7-9fa3-81a74c3720e0', "cidr": '172.24.4.0/24', "gateway_ip": '172.24.4.1'},
+            {"router_id": '5ed262ef-920f-4e51-a0a1-5021f1671288', "name": 'router1', "port_id": 'c65e73a3-89b2-41f6-acff-c5f66b60082c', "cidr": '10.2.0.0/24', "gateway_ip": '10.2.0.1'}
+        ]
+
+        routes_compute = [
+            {"uuid": '5ed262ef-920f-4e51-a0a1-5021f1671288', "iface": 'qg-f94db071-e1', "inet": '172.24.4.94/24', "cidr": '172.24.4.0/24', "src": '172.24.4.94', "default_gw": '172.24.4.1'}
+        ]
+
+        dict_routes_controller = self.v.getDictRoutesController(routes_controller)
+        dict_routes_compute = self.v.getDictRoutesCompute(routes_compute)
+
+        inconsistent_routes_assert = [("5ed262ef-920f-4e51-a0a1-5021f1671288", "c65e73a3-89b2-41f6-acff-c5f66b60082c")]
+
+        inconsistent_routes = self.v.verify(dict_routes_controller, dict_routes_compute)
+        self.assertEqual(inconsistent_routes, inconsistent_routes_assert, "Should contain 1 route")
+
+        rows = self.r.saveData(self.snapshot_id, inconsistent_routes)
+        self.assertEqual(rows, 1, "Should be 1")
+
 
 if __name__ == '__main__':
     unittest.main()
