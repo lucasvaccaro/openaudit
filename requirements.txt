@@ -1,1 +1,2 @@
 ipaddress==1.0.22
+kombu==4.6.4

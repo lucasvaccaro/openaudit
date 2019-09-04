@@ -8,12 +8,12 @@ class DatabaseConnection:
 
     def __init__(self, dbConfig):
         config = configparser.ConfigParser()
-        config.read('config.ini')
+        config.read("config.ini")
         try: 
             self.conn = mysql.connect(
-                host=config[dbConfig]['host'],
-                user=config[dbConfig]['user'],
-                password=config[dbConfig]['pass']
+                host=config[dbConfig]["host"],
+                user=config[dbConfig]["user"],
+                password=config[dbConfig]["pass"]
             )
         except Error as e :
             print ("Error while connecting to database", e)
