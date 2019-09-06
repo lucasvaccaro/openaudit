@@ -1,6 +1,7 @@
 import configparser
 import mysql.connector as mysql
 from mysql.connector import Error
+import logging as log
 
 class DatabaseConnection:
 
@@ -16,7 +17,7 @@ class DatabaseConnection:
                 password=config[dbConfig]["pass"]
             )
         except Error as e :
-            print ("Error while connecting to database", e)
+            log.error("Could not connect to the database", exc_info=True)
 
     def close(self):
         self.conn.close()
