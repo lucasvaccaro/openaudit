@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 {% load i18n %}
-{% block title %}{% trans "OpenAudit - Reports" %}{% endblock %}
+{% block title %}{% trans "OpenAudit - Reports"%}{% endblock %}
 
 {% block page_header %}
-  {% include "horizon/common/_page_header.html" with title=_("Snapshot") %}
-{% endblock page_header %}
+  {% include "horizon/common/_detail_header.html" %}
+{% endblock %}
 
 {% block main %}
 {{ table.render }}

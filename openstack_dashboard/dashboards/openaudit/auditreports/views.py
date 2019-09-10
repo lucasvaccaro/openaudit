@@ -14,6 +14,14 @@ class IndexView(tables.DataTableView):
 class DetailView(tables.DataTableView):
     table_class = auditreports_table.DetailTable
     template_name = 'openaudit/auditreports/detail.html'
+    page_title = 'Snapshot {{ snapshot_id }} @ {{ snapshot_timestamp }}'
 
     def get_data(self):
-        return None
+        return []
+
+    def get_context_data(self, **kwargs):
+        snapshot = openaudit_api.fetch_one(self.kwargs["snapshot_id"])
+        context = super(DetailView, self).get_context_data(**kwargs)
+        context["snapshot_id"] = self.kwargs["snapshot_id"]
+        context["snapshot_timestamp"] = snapshot.timestamp
+        return context

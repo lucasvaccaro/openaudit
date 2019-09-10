@@ -37,9 +37,10 @@ class Snapshot:
         db_conn = DatabaseConnection()
         self.db_conn = db_conn.getConn()
 
-    def setParams(self, id, timestamp):
+    def setParams(self, id, timestamp, issues):
         self.id = id
         self.timestamp = timestamp
+        self.issues = issues
 
     def fetchAll(self):
         if (self.db_conn is None):
@@ -52,7 +53,7 @@ class Snapshot:
         obj_ls = []
         for row in ls:
             s = Snapshot()
-            s.setParams(row[0], row[1])
+            s.setParams(row[0], row[1], row[2])
             obj_ls.append(s)
         return obj_ls
 
@@ -65,7 +66,7 @@ class Snapshot:
         row = db_cursor.fetchone()
         self.db_conn.close()
         s = Snapshot()
-        s.setParams(row[0], row[1])
+        s.setParams(row[0], row[1], None)
         return s
 
 
