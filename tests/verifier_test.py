@@ -8,8 +8,7 @@ import unittest
 class IsolationVerifierTest(unittest.TestCase):
 
     v = verifier.IsolationVerifier()
-    r = reporter.IsolationReporter()
-    snapshot_id = 1
+    r = reporter.IsolationReporter(snapshot_id=1)
 
     def testCompliant1(self):
         hosts_controller = [
@@ -55,7 +54,7 @@ class IsolationVerifierTest(unittest.TestCase):
         noncompliant_hosts, missing_instances = self.v.verify(dict_hosts_controller, dict_hosts_compute)
         self.assertEqual(noncompliant_hosts, ["server1"], "Should contain 'server1'")
 
-        rows = self.r.saveData(self.snapshot_id, noncompliant_hosts, missing_instances)
+        rows = self.r.saveData(noncompliant_hosts, missing_instances)
         self.assertEqual(rows, 1, "Should be 1")
 
     def testNoncompliant2(self):
@@ -78,14 +77,14 @@ class IsolationVerifierTest(unittest.TestCase):
         noncompliant_hosts, missing_instances = self.v.verify(dict_hosts_controller, dict_hosts_compute)
         self.assertEqual(missing_instances, ["inst3"], "Should contain 'inst3'")
 
-        rows = self.r.saveData(self.snapshot_id, noncompliant_hosts, missing_instances)
+        rows = self.r.saveData(noncompliant_hosts, missing_instances)
         self.assertEqual(rows, 1, "Should be 1")
 
 
 class SecurityGroupsVerifierTest(unittest.TestCase):
 
     v = verifier.SecurityGroupsVerifier()
-    r = reporter.SecurityGroupsReporter()
+    r = reporter.SecurityGroupsReporter(snapshot_id=1)
     snapshot_id = 1
 
     def testCompliant1(self):
@@ -144,14 +143,14 @@ class SecurityGroupsVerifierTest(unittest.TestCase):
         inconsistent_ports = self.v.verify(dict_secgroups_controller, dict_secgroups_compute)
         self.assertEqual(inconsistent_ports, ["505f8fea-8e12-404c-8789-d769e728449d", "d769e728-e912-404c-8789-505f8fea449d"], "Inconsistent rules should contain 505f8fea-8e and d769e728-e9")
 
-        rows = self.r.saveData(self.snapshot_id, inconsistent_ports)
+        rows = self.r.saveData(inconsistent_ports)
         self.assertEqual(rows, 2, "Should be 2")
 
 
 class RoutesVerifierTest(unittest.TestCase):
 
     v = verifier.RoutesVerifier()
-    r = reporter.RoutesReporter()
+    r = reporter.RoutesReporter(snapshot_id=1)
     snapshot_id = 1
 
     def testCompliant1(self):
@@ -190,7 +189,7 @@ class RoutesVerifierTest(unittest.TestCase):
         inconsistent_routes = self.v.verify(dict_routes_controller, dict_routes_compute)
         self.assertEqual(inconsistent_routes, inconsistent_routes_assert, "Should contain 1 route")
 
-        rows = self.r.saveData(self.snapshot_id, inconsistent_routes)
+        rows = self.r.saveData(inconsistent_routes)
         self.assertEqual(rows, 1, "Should be 1")
 
     def testNonCompliant2(self):
@@ -212,7 +211,7 @@ class RoutesVerifierTest(unittest.TestCase):
         inconsistent_routes = self.v.verify(dict_routes_controller, dict_routes_compute)
         self.assertEqual(inconsistent_routes, inconsistent_routes_assert, "Should contain both routes")
 
-        rows = self.r.saveData(self.snapshot_id, inconsistent_routes)
+        rows = self.r.saveData(inconsistent_routes)
         self.assertEqual(rows, 2, "Should be 2")
 
     def testNonCompliant3(self):
@@ -233,7 +232,7 @@ class RoutesVerifierTest(unittest.TestCase):
         inconsistent_routes = self.v.verify(dict_routes_controller, dict_routes_compute)
         self.assertEqual(inconsistent_routes, inconsistent_routes_assert, "Should contain 1 route")
 
-        rows = self.r.saveData(self.snapshot_id, inconsistent_routes)
+        rows = self.r.saveData(inconsistent_routes)
         self.assertEqual(rows, 1, "Should be 1")
 
 
