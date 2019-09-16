@@ -10,8 +10,8 @@ class DetailAction(tables.LinkAction):
 
 class SnapshotsTable(tables.DataTable):
     snapshot_id = tables.Column("id", verbose_name=_("Snapshot ID"))
-    snapshot_timestamp = tables.Column('timestamp', verbose_name=_("Date & Time"))
-    snapshot_issues = tables.Column('issues', verbose_name=_("Issues Found"))
+    snapshot_timestamp = tables.Column("timestamp", verbose_name=_("Date & Time"))
+    snapshot_issues = tables.Column("issues", verbose_name=_("Issues Found"))
     def __init__(self, request, data=None, needs_form_wrapper=None, **kwargs):
         super(SnapshotsTable, self).__init__(
             request,
@@ -25,8 +25,9 @@ class SnapshotsTable(tables.DataTable):
         row_actions = (DetailAction,)
 
 class DetailTable(tables.DataTable):
-    snapshot_id = tables.Column("id", verbose_name=_("Device"))
-    snapshot_timestamp = tables.Column('timestamp', verbose_name=_("Issue"))
+    layer = tables.Column("layer", verbose_name=_("Layer"))
+    device = tables.Column("device", verbose_name=_("Device"))
+    issue = tables.Column("issue", verbose_name=_("Issue"))
     def __init__(self, request, data=None, needs_form_wrapper=None, **kwargs):
         super(DetailTable, self).__init__(
             request,

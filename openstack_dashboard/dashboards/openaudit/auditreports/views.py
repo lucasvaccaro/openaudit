@@ -17,7 +17,7 @@ class DetailView(tables.DataTableView):
     page_title = 'Snapshot {{ snapshot_id }} @ {{ snapshot_timestamp }}'
 
     def get_data(self):
-        return []
+        return openaudit_api.fetch_all_issues(self.kwargs["snapshot_id"])
 
     def get_context_data(self, **kwargs):
         snapshot = openaudit_api.fetch_one(self.kwargs["snapshot_id"])
