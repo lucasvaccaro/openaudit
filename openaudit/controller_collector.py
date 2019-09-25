@@ -34,6 +34,9 @@ class ControllerCollector():
         self.db_conn_local.commit()
         return rowcount
 
+    def run(self, snapshot_id):
+        self.saveData(self.getData(), snapshot_id)
+
 
 class IsolationControllerCollector(ControllerCollector):
 

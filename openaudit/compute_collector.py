@@ -23,6 +23,10 @@ class ComputeCollector():
     def runCmd(self, cmd):
         return subprocess.check_output(cmd, shell=True)
 
+    @abstractmethod
+    def run(self, snapshot_id):
+        pass
+
 
 class IsolationComputeCollector(ComputeCollector):
      
@@ -59,7 +63,11 @@ class IsolationComputeCollector(ComputeCollector):
             rowcount += cursor.rowcount
         self.db_conn.commit()
         return rowcount
-    
+
+    def run(self, snapshot_id):
+        data = self.getData()
+        parsed_data = self.c.parseData(data)
+        self.c.saveData(parsed_data, snapshot_id)
 
 class SecurityGroupsComputeCollector(ComputeCollector):
     
@@ -73,7 +81,6 @@ class SecurityGroupsComputeCollector(ComputeCollector):
             # Get routers` configuration
             self.getFlows(ports, uuid)
         return routers
-
     
     def getPorts(self, lines = None):
         """
@@ -159,6 +166,10 @@ class SecurityGroupsComputeCollector(ComputeCollector):
         self.db_conn.commit()
         return rowcount
 
+    def run(self, snapshot_id):
+        data = self.getData()
+        self.c.saveData(data, snapshot_id)
+
 
 class RoutesComputeCollector(ComputeCollector):
     
@@ -243,3 +254,8 @@ class RoutesComputeCollector(ComputeCollector):
                 rowcount += cursor.rowcount
         self.db_conn.commit()
         return rowcount
+
+    def run(self, snapshot_id):
+        data = self.getData()
+        self.c.saveData(data, snapshot_id)
+

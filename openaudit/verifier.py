@@ -52,6 +52,10 @@ class Verifier:
     def verify(self, controller_data, compute_data):
         pass
 
+    @abstractmethod
+    def run(self, snapshot_id):
+        pass
+
 
 class IsolationVerifier(Verifier):
 
@@ -107,6 +111,13 @@ class IsolationVerifier(Verifier):
                 else:
                     project_id = inst["project_id"]
         return (noncompliant_hosts, missing_instances)
+
+    def run(self, snapshot_id):
+        controller_data = self.getControllerData(snapshot_id)
+        compute_data = self.getComputeData(snapshot_id)
+        dict_hosts_controller = self.getDictHostsController(controller_data)
+        dict_hosts_compute = self.getDictHostsCompute(compute_data)
+        return verify(dict_hosts_controller, dict_hosts_compute)
 
 
 class SecurityGroupsVerifier(Verifier):
@@ -185,6 +196,13 @@ class SecurityGroupsVerifier(Verifier):
                 rules_ctl_remaining -= 1
         return rules_ctl_remaining == 0 and rules_cmp_remaining == rules_ctl_remaining
 
+    def run(self, snapshot_id):
+        controller_data = self.getControllerData(snapshot_id)
+        compute_data = self.getComputeData(snapshot_id)
+        dict_secgroups_controller = self.v.getDictSecurityGroupsController(controller_data)
+        dict_secgroups_compute = self.v.getDictSecurityGroupsCompute(compute_data)
+        return self.verify(dict_secgroups_controller, dict_secgroups_compute)
+
 
 class RoutesVerifier(Verifier):
     def getControllerData(self, snapshot_id):
@@ -247,3 +265,11 @@ class RoutesVerifier(Verifier):
         except:
             ip_in_cidr = False
         return equals_cidr and equals_gw and ip_in_cidr
+
+    def run(self, snapshot_id):
+        controller_data = self.getControllerData(snapshot_id)
+        compute_data = self.getComputeData(snapshot_id)
+        dict_routes_controller = self.v.getDictRoutesController(controller_data)
+        dict_routes_compute = self.v.getDictRoutesCompute(compute_data)
+        return self.verify(dict_routes_controller, dict_routes_compute)
+
