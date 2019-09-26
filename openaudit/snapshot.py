@@ -32,6 +32,26 @@ class Snapshot:
         self.id = row[0]
         return self.id
 
+    def getUnverifiedSnapshot(self):
+        """
+        Retrieves the ID of the oldest unverified snapshot
+        """
+        sql = "SELECT id FROM openaudit.snapshots WHERE verified = 0 ORDER BY timestamp ASC LIMIT 1"
+        cursor = self.db_conn.cursor()
+        cursor.execute(sql)
+        row = cursor.fetchone()
+        self.id = row[0]
+        return self.id
+
+    def setVerified(self):
+        """
+        Sets the snapshot as verified
+        """
+        sql = "UPDATE openaudit.snapshots SET verified = 1 WHERE id = %s"
+        cursor = self.db_conn.cursor()
+        cursor.execute(sql, (self.id,))
+        self.db_conn.commit()
+
     def updateIssues(self, num):
         """
         Udates (adds) the number of issues of a snapshot

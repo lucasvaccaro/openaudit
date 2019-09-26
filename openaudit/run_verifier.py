@@ -5,12 +5,9 @@ import reporter
 
 log.basicConfig(stream=sys.stdout, level=log.INFO)
 
-def getSnapshotId():
-    snap = snapshot.Snapshot()
-    return snap.getLastId()
-
 if __name__ == '__main__':
-    snapshot_id = getSnapshotId()
+    snap = snapshot.Snapshot()
+    snapshot_id = snap.getUnverifiedSnapshot()
 
     log.info("Running verifier for snapshot id %s", snapshot_id)
 
@@ -31,5 +28,8 @@ if __name__ == '__main__':
     inconsistent_routes = v3.run()
     r3 = reporter.RoutesReporter(snapshot_id)
     r3.saveData(inconsistent_routes)
+
+    log.info("Finishing...")
+    snap.setVerified()
 
     log.info("Finished")
