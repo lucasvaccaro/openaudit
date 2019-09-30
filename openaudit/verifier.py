@@ -17,13 +17,12 @@ class Verifier:
         Fetches all data of a snapshot from a table
         """
         sql = (
-            "SELECT ALL "
-            "FROM openaudit." + table + " "
-            "WHERE snapshot_id = %d",
-            (snapshot_id,)
-        )
-        db_cursor = self.db_conn_stack.cursor()
-        db_cursor.execute(sql)
+            "SELECT * "
+            "FROM openaudit.{} "
+            "WHERE snapshot_id = %s"
+        ).format(table)
+        db_cursor = self.db_conn.cursor(dictionary=True)
+        db_cursor.execute(sql, (snapshot_id,))
         return db_cursor.fetchall()
 
     def toDict(self, ls, attr):
@@ -117,7 +116,7 @@ class IsolationVerifier(Verifier):
         compute_data = self.getComputeData(snapshot_id)
         dict_hosts_controller = self.getDictHostsController(controller_data)
         dict_hosts_compute = self.getDictHostsCompute(compute_data)
-        return verify(dict_hosts_controller, dict_hosts_compute)
+        return self.verify(dict_hosts_controller, dict_hosts_compute)
 
 
 class SecurityGroupsVerifier(Verifier):
@@ -155,7 +154,7 @@ class SecurityGroupsVerifier(Verifier):
         inconsistent_ports = []
         for ctl_port in controller_data:
             cmp_port = self.findComputePort(compute_data, ctl_port)
-            if not self.verifyRules(controller_data[ctl_port], compute_data[cmp_port]):
+            if cmp_port is None or not self.verifyRules(controller_data[ctl_port], compute_data[cmp_port]):
                 inconsistent_ports.append(ctl_port)
         return inconsistent_ports
 
@@ -199,8 +198,8 @@ class SecurityGroupsVerifier(Verifier):
     def run(self, snapshot_id):
         controller_data = self.getControllerData(snapshot_id)
         compute_data = self.getComputeData(snapshot_id)
-        dict_secgroups_controller = self.v.getDictSecurityGroupsController(controller_data)
-        dict_secgroups_compute = self.v.getDictSecurityGroupsCompute(compute_data)
+        dict_secgroups_controller = self.getDictSecurityGroupsController(controller_data)
+        dict_secgroups_compute = self.getDictSecurityGroupsCompute(compute_data)
         return self.verify(dict_secgroups_controller, dict_secgroups_compute)
 
 
@@ -269,7 +268,7 @@ class RoutesVerifier(Verifier):
     def run(self, snapshot_id):
         controller_data = self.getControllerData(snapshot_id)
         compute_data = self.getComputeData(snapshot_id)
-        dict_routes_controller = self.v.getDictRoutesController(controller_data)
-        dict_routes_compute = self.v.getDictRoutesCompute(compute_data)
+        dict_routes_controller = self.getDictRoutesController(controller_data)
+        dict_routes_compute = self.getDictRoutesCompute(compute_data)
         return self.verify(dict_routes_controller, dict_routes_compute)
 

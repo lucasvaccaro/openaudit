@@ -58,6 +58,7 @@ class IsolationControllerCollector(ControllerCollector):
         sql = "INSERT INTO openaudit.snapshot_isolation_controller (uuid, host, project_id, snapshot_id) VALUES (%s, %s, %s, %s)"
         return super(IsolationControllerCollector, self).saveData(sql, data, snapshot_id)
 
+
 class SecurityGroupsControllerCollector(ControllerCollector):
 
     def getData(self):

@@ -3,6 +3,8 @@ sys.path.append('../openaudit')
 import compute_collector
 import unittest
 
+import pdb
+
 
 class IsolationComputeCollectorTest(unittest.TestCase):
 

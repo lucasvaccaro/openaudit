@@ -1,5 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import database_connection as db
+import sys
+import logging as log
 import subprocess
 
 
@@ -21,7 +23,12 @@ class ComputeCollector():
         pass
 
     def runCmd(self, cmd):
-        return subprocess.check_output(cmd, shell=True)
+        out = None
+        try:
+            out = subprocess.check_output(cmd, shell=True)
+        except subprocess.CalledProcessError as e:
+            log.error(e.output)
+        return out
 
     @abstractmethod
     def run(self, snapshot_id):
@@ -66,8 +73,9 @@ class IsolationComputeCollector(ComputeCollector):
 
     def run(self, snapshot_id):
         data = self.getData()
-        parsed_data = self.c.parseData(data)
-        self.c.saveData(parsed_data, snapshot_id)
+        parsed_data = self.parseData(data)
+        self.saveData(parsed_data, snapshot_id)
+
 
 class SecurityGroupsComputeCollector(ComputeCollector):
     
@@ -80,7 +88,7 @@ class SecurityGroupsComputeCollector(ComputeCollector):
         for uuid in ports:
             # Get routers` configuration
             self.getFlows(ports, uuid)
-        return routers
+        return ports
     
     def getPorts(self, lines = None):
         """
@@ -89,7 +97,9 @@ class SecurityGroupsComputeCollector(ComputeCollector):
         """
         # Get namespaces
         if lines is None:
-            lines = self.runCmd("ip link").strip().splitlines()
+            lines = self.runCmd("ip link")
+            if not lines is None:
+                lines = lines.strip().splitlines()
         # Build map of ports where the key is the partial uuid from the tap iface
         ports = {}
         for i, item in enumerate(lines):
@@ -97,7 +107,7 @@ class SecurityGroupsComputeCollector(ComputeCollector):
             if iface.startswith("tap"):
                 uuid = iface[3:]
                 mac = lines[i+1].strip().split()[1]
-                ports[iface] = {"egress": [], "ingress": []}
+                ports[iface] = {"egress": [], "ingress": [], "mac": mac}
             i += 2
         return ports
 
@@ -105,21 +115,29 @@ class SecurityGroupsComputeCollector(ComputeCollector):
         """
         Gets all the flows that represent securiry groups of a port (tap iface)
         """
+        mac = ports[uuid]["mac"]
+
         if lines_eg is None:
             cmd_eg = "ovs-ofctl dump-flows br-int table=72 | grep \"" + mac + "\""
-            lines_eg = self.runCmd(cmd).splitlines()
+            lines_eg = self.runCmd(cmd_eg)
+            if not lines_eg is None:
+                lines_eg = lines_eg.splitlines()
 
         if lines_ig is None:
             cmd_ig = "ovs-ofctl dump-flows br-int table=82 | grep \"" + mac + "\""
-            lines_ig = self.runCmd(cmd).splitlines()
+            lines_ig = self.runCmd(cmd_ig)
+            if not lines_ig is None:
+                lines_ig = lines_ig.splitlines()
 
-        for line in lines_eg:
-            protocol, cidr, port = self.parseFlow(line)
-            ports[uuid]["egress"].append([protocol, cidr, port])
+        if not lines_eg is None:
+            for line in lines_eg:
+                protocol, cidr, port = self.parseFlow(line)
+                ports[uuid]["egress"].append([protocol, cidr, port])
 
-        for line in lines_ig:
-            protocol, cidr, port = self.parseFlow(line)
-            ports[uuid]["ingress"].append([protocol, cidr, port])
+        if not lines_ig is None:
+            for line in lines_ig:
+                protocol, cidr, port = self.parseFlow(line)
+                ports[uuid]["ingress"].append([protocol, cidr, port])
 
     def parseFlow(self, line):
         """
@@ -158,17 +176,20 @@ class SecurityGroupsComputeCollector(ComputeCollector):
         cursor = self.db_conn.cursor()
         rowcount = 0
         for uuid in data:
-            for direction, rules in data[uuid].items():
-                for rule in rules:
-                    values = (uuid[3:], direction, rule[0], rule[1], rule[2], snapshot_id)
-                    cursor.execute(sql_insert, values)
-                    rowcount += cursor.rowcount
+            for rule in data[uuid]["ingress"]:
+                values = (uuid[3:], "ingress", rule[0], rule[1], rule[2], snapshot_id)
+                cursor.execute(sql_insert, values)
+                rowcount += cursor.rowcount
+            for rule in data[uuid]["egress"]:
+                values = (uuid[3:], "egress", rule[0], rule[1], rule[2], snapshot_id)
+                cursor.execute(sql_insert, values)
+                rowcount += cursor.rowcount
         self.db_conn.commit()
         return rowcount
 
     def run(self, snapshot_id):
         data = self.getData()
-        self.c.saveData(data, snapshot_id)
+        self.saveData(data, snapshot_id)
 
 
 class RoutesComputeCollector(ComputeCollector):
@@ -257,5 +278,4 @@ class RoutesComputeCollector(ComputeCollector):
 
     def run(self, snapshot_id):
         data = self.getData()
-        self.c.saveData(data, snapshot_id)
-
+        self.saveData(data, snapshot_id)
